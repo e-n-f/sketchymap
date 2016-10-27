@@ -1,0 +1,15 @@
+#!/usr/bin/perl
+
+open(IN, "<$ARGV[0]");
+$line = <IN>;
+($minlat, $minlon, $maxlat, $maxlon) = split(/ /, $line);
+close(IN);
+shift @ARGV;
+
+while (<>) {
+	($user, $date, $time, $where, $url) = split(/ /);
+	($lat, $lon) = split(/,/, $where);
+	$lat = ($lat - $minlat) / ($maxlat - $minlat);
+	$lon = ($lon - $minlon) / ($maxlon - $minlon);
+	print "$lon $lat $url\n";
+}
