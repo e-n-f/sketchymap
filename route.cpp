@@ -4,6 +4,7 @@
 #include <vector>
 #include <map>
 #include <set>
+#include <limits>
 
 struct point {
 	double x;
@@ -20,20 +21,26 @@ void addpoint(std::vector<point> &points, size_t p, double x, double y) {
 		points.resize(p + 1);
 	}
 
+	if (points[p].x != 0 && (points[p].x != x || points[p].y != y)) {
+		fprintf(stderr, "UGH %zu\n", p);
+	}
+
 	points[p].x = x;
 	points[p].y = y;
 }
 
 void addneighbor(std::vector<point> &points, size_t p1, size_t p2) {
-	double xd = points[p1].x - points[p2].x;
-	double yd = points[p1].y - points[p2].y;
+	if (points[p1].neighbors.count(p2) == 0) {
+		double xd = points[p1].x - points[p2].x;
+		double yd = points[p1].y - points[p2].y;
 
-	points[p1].neighbors.insert(std::pair<size_t, double>(p2, sqrt(xd * xd + yd * yd)));
+		points[p1].neighbors.insert(std::pair<size_t, double>(p2, sqrt(xd * xd + yd * yd)));
+	}
 }
 
 size_t find_node(std::vector<point> const &points, double x, double y) {
 	size_t best = 0;
-	double bestdsq = 999;
+	double bestdsq = std::numeric_limits<double>::infinity();
 	for (size_t i = 0; i < points.size(); i++) {
 		if (points[i].neighbors.size() > 0) {
 			double xd = points[i].x - x;
@@ -52,6 +59,8 @@ size_t find_node(std::vector<point> const &points, double x, double y) {
 }
 
 double heur(std::vector<point> const &points, size_t n1, size_t n2) {
+	return 0;
+
 	double xd = points[n1].x - points[n2].x;
 	double yd = points[n1].y - points[n2].y;
 	return sqrt(xd * xd + yd * yd);
@@ -69,33 +78,49 @@ std::vector<size_t> reconstruct(std::vector<point> const &points, size_t current
 	return path;
 }
 
-std::vector<size_t> astar(std::vector<point> &points, size_t n1, size_t n2) {
+std::vector<size_t> astar(std::vector<point> &points, size_t start, size_t goal) {
 	std::set<size_t> closed_set;
 
 	std::set<size_t> open_set;
-	open_set.insert(n1);
+	open_set.insert(start);
 
 	for (size_t i = 0; i < points.size(); i++) {
-		points[i].g_score = 999;
-		points[i].f_score = 999;
+		points[i].g_score = std::numeric_limits<double>::infinity();
+		points[i].f_score = std::numeric_limits<double>::infinity();
 		points[i].came_from = -1;
 	}
 
-	points[n1].g_score = 0;
-	points[n1].f_score = heur(points, n1, n2);
+	points[start].g_score = 0;
+	points[start].f_score = heur(points, start, goal);
 
 	while (open_set.size() != 0) {
-		size_t current ;
+		size_t current;
 
+#if 1
+		bool first = true;
 		for (auto i = open_set.begin(); i != open_set.end(); ++i) {
-			if (i == open_set.begin()) {
+			if (first) {
+				//printf("defaulting to %zu, f_score %f\n", *i, points[*i].f_score);
 				current = *i;
+				first = false;
 			} else if (points[*i].f_score < points[current].f_score) {
+				//printf("better: %zu, f_score %f\n", *i, points[*i].f_score);
 				current = *i;
 			}
 		}
+#else
+		for (auto i = open_set.begin(); i != open_set.end(); ++i) {
+			if (i == open_set.begin()) {
+				current = *i;
+			} else if (points[*i].g_score < points[current].g_score) {
+				current = *i;
+			}
+		}
+#endif
 
-		if (current == n2) {
+		//printf("so current is %zu, g_score %f\n", current, points[current].g_score);
+
+		if (current == goal) {
 			return reconstruct(points, current);
 		}
 
@@ -103,21 +128,25 @@ std::vector<size_t> astar(std::vector<point> &points, size_t n1, size_t n2) {
 		closed_set.insert(current);
 
 		for (auto n = points[current].neighbors.begin(); n != points[current].neighbors.end(); ++n) {
-			if (closed_set.count(n->first) > 0) {
+			size_t neighbor = n->first;
+
+			if (closed_set.count(neighbor) > 0) {
+				//printf("%zu is closed\n", neighbor);
 				continue;
 			}
 
 			double tentative_g_score = points[current].g_score + n->second;
+			//printf("%zu tentatively costs %f\n", neighbor, tentative_g_score);
 
-			if (open_set.count(n->first) == 0) {
-				open_set.insert(n->first);
-			} else if (tentative_g_score < points[n->first].g_score) {
+			if (open_set.count(neighbor) == 0) {
+				open_set.insert(neighbor);
+			} else if (tentative_g_score < points[neighbor].g_score) {
 				continue;
 			}
 
-			points[n->first].came_from = current;
-			points[n->first].g_score = tentative_g_score;
-			points[n->first].f_score = tentative_g_score + heur(points, n->first, n2);
+			points[neighbor].came_from = current;
+			points[neighbor].g_score = tentative_g_score;
+			points[neighbor].f_score = tentative_g_score + heur(points, neighbor, goal);
 		}
 	}
 
