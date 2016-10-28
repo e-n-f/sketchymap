@@ -46,7 +46,7 @@ void addneighbor(std::vector<point> &points, size_t p1, size_t p2) {
 		double yd = points[p1].y - points[p2].y;
 		double dist = sqrt(xd * xd + yd * yd);
 
-		dist = exp(log(dist) * 4);
+		dist = exp(log(dist) * 2);
 
 		for (auto n = points[p1].neighbors.begin(); n != points[p1].neighbors.end(); ++n) {
 			if (n->second == dist) {
@@ -173,50 +173,75 @@ std::vector<size_t> astar(std::vector<point> &points, size_t start, size_t goal)
 	return std::vector<size_t>();
 }
 
-void bezier(double x0, double y0, double x1, double y1, double x2, double y2, double x3, double y3) {
-	// http://www.antigrain.com/research/bezier_interpolation/
+void bezier(std::vector<point> const &line) {
+	if (line.size() < 2) {
+		return;
+	}
 
-	// Assume we need to calculate the control
-	// points between (x1,y1) and (x2,y2).
-	// Then x0,y0 - the previous vertex,
-	//      x3,y3 - the next one.
+	printf("%.6f %.6f moveto ", line[0].x * 612, line[0].y * 612);
 
-	double xc1 = (x0 + x1) / 2.0;
-	double yc1 = (y0 + y1) / 2.0;
-	double xc2 = (x1 + x2) / 2.0;
-	double yc2 = (y1 + y2) / 2.0;
-	double xc3 = (x2 + x3) / 2.0;
-	double yc3 = (y2 + y3) / 2.0;
+	for (size_t i = 0; i + 1 < line.size(); i++) {
+		double x1 = line[i].x;
+		double y1 = line[i].y;
 
-	double len1 = sqrt((x1-x0) * (x1-x0) + (y1-y0) * (y1-y0));
-	double len2 = sqrt((x2-x1) * (x2-x1) + (y2-y1) * (y2-y1));
-	double len3 = sqrt((x3-x2) * (x3-x2) + (y3-y2) * (y3-y2));
+		double x2 = line[i + 1].x;
+		double y2 = line[i + 1].y;
 
-	double k1 = len1 / (len1 + len2);
-	double k2 = len2 / (len2 + len3);
+		double x0 = x1, y0 = y1;
+		if (i > 0) {
+			x0 = line[i - 1].x;
+			y0 = line[i - 1].y;
+		}
 
-	double xm1 = xc1 + (xc2 - xc1) * k1;
-	double ym1 = yc1 + (yc2 - yc1) * k1;
+		double x3 = x2, y3 = y2;
+		if (i + 2 < line.size()) {
+			x3 = line[i + 2].x;
+			y3 = line[i + 2].y;
+		}
 
-	double xm2 = xc2 + (xc3 - xc2) * k2;
-	double ym2 = yc2 + (yc3 - yc2) * k2;
+		// http://www.antigrain.com/research/bezier_interpolation/
 
-	double smooth_value = .5;
+		// Assume we need to calculate the control
+		// points between (x1,y1) and (x2,y2).
+		// Then x0,y0 - the previous vertex,
+		//      x3,y3 - the next one.
 
-	// Resulting control points. Here smooth_value is mentioned
-	// above coefficient K whose value should be in range [0...1].
-	double ctrl1_x = xm1 + (xc2 - xm1) * smooth_value + x1 - xm1;
-	double ctrl1_y = ym1 + (yc2 - ym1) * smooth_value + y1 - ym1;
+		double xc1 = (x0 + x1) / 2.0;
+		double yc1 = (y0 + y1) / 2.0;
+		double xc2 = (x1 + x2) / 2.0;
+		double yc2 = (y1 + y2) / 2.0;
+		double xc3 = (x2 + x3) / 2.0;
+		double yc3 = (y2 + y3) / 2.0;
 
-	double ctrl2_x = xm2 + (xc2 - xm2) * smooth_value + x2 - xm2;
-	double ctrl2_y = ym2 + (yc2 - ym2) * smooth_value + y2 - ym2;
+		double len1 = sqrt((x1-x0) * (x1-x0) + (y1-y0) * (y1-y0));
+		double len2 = sqrt((x2-x1) * (x2-x1) + (y2-y1) * (y2-y1));
+		double len3 = sqrt((x3-x2) * (x3-x2) + (y3-y2) * (y3-y2));
 
-	//printf("%.6f %.6f moveto ", x0 * 612, y0 * 612);
-	printf("%.6f %.6f moveto ", x1 * 612, y1 * 612);
-	printf("%.6f %.6f ", ctrl1_x * 612, ctrl1_y * 612);
-	printf("%.6f %.6f ", ctrl2_x * 612, ctrl2_y * 612);
-	printf("%.6f %.6f curveto ", x2 * 612, y2 * 612);
-	//printf("%.6f %.6f lineto ", x3 * 612, y3 * 612);
+		double k1 = len1 / (len1 + len2);
+		double k2 = len2 / (len2 + len3);
+
+		double xm1 = xc1 + (xc2 - xc1) * k1;
+		double ym1 = yc1 + (yc2 - yc1) * k1;
+
+		double xm2 = xc2 + (xc3 - xc2) * k2;
+		double ym2 = yc2 + (yc3 - yc2) * k2;
+
+		double smooth_value = .5;
+
+		// Resulting control points. Here smooth_value is mentioned
+		// above coefficient K whose value should be in range [0...1].
+		double ctrl1_x = xm1 + (xc2 - xm1) * smooth_value + x1 - xm1;
+		double ctrl1_y = ym1 + (yc2 - ym1) * smooth_value + y1 - ym1;
+
+		double ctrl2_x = xm2 + (xc2 - xm2) * smooth_value + x2 - xm2;
+		double ctrl2_y = ym2 + (yc2 - ym2) * smooth_value + y2 - ym2;
+
+		printf("%.6f %.6f ", ctrl1_x * 612, ctrl1_y * 612);
+		printf("%.6f %.6f ", ctrl2_x * 612, ctrl2_y * 612);
+		printf("%.6f %.6f curveto ", x2 * 612, y2 * 612);
+	}
+
+	printf("%.6f %.6f lineto stroke\n", line[line.size() - 1].x * 612, line[line.size() - 1].y * 612);
 }
 
 static double square_distance_from_line(double point_x, double point_y, double segA_x, double segA_y, double segB_x, double segB_y) {
@@ -311,7 +336,7 @@ static std::vector<point> simplify(std::vector<point> &line) {
 	line[0].necessary = 1;
 	line[line.size() - 1].necessary = 1;
 
-	douglas_peucker(line, .01); // .04 is about a mile
+	douglas_peucker(line, .02); // .04 is about a mile
 
 	std::vector<point> out;
 	for (size_t i = 0; i < line.size(); i++) {
@@ -397,25 +422,15 @@ int main(int argc, char **argv) {
 		line.push_back(point(x1, y1));
 
 		line = simplify(line);
+		bezier(line);
 
+#if 0
 		for (size_t i = 0; i < line.size(); i++) {
 			printf("%.6f %.6f %s ", line[i].x * 612, line[i].y * 612, i == 0 ? "moveto" : "lineto");
 		}
 		printf("stroke\n");
-
-#if 0
-		if (route.size() > 2) {
-			size_t n = route.size();
-			bezier(x2, y2, points[route[n / 3]].x, points[route[n / 3]].y, points[route[n * 2 / 3]].x, points[route[n * 2 / 3]].y, x1, y1);
-		}
-
-		printf("%.6f %.6f moveto ", x2 * 612, y2 * 612);
-		for (size_t i = 0; i < route.size(); i++) {
-			printf("%.6f %.6f %s ", points[route[i]].x * 612, points[route[i]].y * 612, i == 0 ? "lineto" : "lineto");
-		}
-		printf("%.6f %.6f lineto ", x1 * 612, y1 * 612);
 #endif
-		printf("stroke\n");
+
 		fflush(stdout);
 	}
 }
