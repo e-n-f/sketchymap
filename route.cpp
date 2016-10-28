@@ -33,8 +33,9 @@ void addneighbor(std::vector<point> &points, size_t p1, size_t p2) {
 	if (points[p1].neighbors.count(p2) == 0) {
 		double xd = points[p1].x - points[p2].x;
 		double yd = points[p1].y - points[p2].y;
+		double dist = sqrt(xd * xd + yd * yd);
 
-		points[p1].neighbors.insert(std::pair<size_t, double>(p2, sqrt(xd * xd + yd * yd)));
+		points[p1].neighbors.insert(std::pair<size_t, double>(p2, exp(log(dist) * 2)));
 	}
 }
 
