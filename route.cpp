@@ -8,6 +8,8 @@
 #include <stack>
 #include <cmath>
 
+// (cat 4.list | ./normalize-list-specified bounds/4 | ./voronoi/voronoi -t; cat 4.geo | ./normalize-geo-specified bounds/4 ) | time ./route > foo.ps
+
 struct point {
 	double x;
 	double y;
@@ -347,6 +349,19 @@ static std::vector<point> simplify(std::vector<point> &line) {
 	return out;
 }
 
+point jitter(std::vector<point> const &points, size_t i) {
+	double xd = 0, yd = 0, sum = 0;
+	for (auto n = points[i].neighbors.begin(); n != points[i].neighbors.end(); ++n) {
+		double weight = rand() % 1000;
+		xd += (points[n->first].x - points[i].x) * weight;
+		yd += (points[n->first].y - points[i].y) * weight;
+		sum += weight;
+	}
+	xd /= sum;
+	yd /= sum;
+	return point(points[i].x + xd, points[i].y + yd);
+}
+
 int main(int argc, char **argv) {
 	char s[2000];
 
@@ -417,7 +432,8 @@ int main(int argc, char **argv) {
 		std::vector<point> line;
 		line.push_back(point(x2, y2));
 		for (size_t i = 0; i < route.size(); i++) {
-			line.push_back(points[route[i]]);
+			line.push_back(jitter(points, route[i]));
+			// line.push_back(points[route[i]]);
 		}
 		line.push_back(point(x1, y1));
 
