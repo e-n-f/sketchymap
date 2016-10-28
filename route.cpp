@@ -37,13 +37,15 @@ size_t find_node(std::vector<point> const &points, double x, double y) {
 	for (size_t i = 0; i < points.size(); i++) {
 		if (points[i].neighbors.size() > 0) {
 			double xd = points[i].x - x;
-			double yd = points[i].x - y;
+			double yd = points[i].y - y;
 			double dsq = xd * xd + yd * yd;
 
 			if (dsq < bestdsq) {
+				//printf("%f,%f: %f,%f %f is better than %f\n", x, y, points[i].x, points[i].y, dsq, bestdsq);
 				best = i;
 				bestdsq = dsq;
 			}
+
 		}
 	}
 	return best;
@@ -127,6 +129,9 @@ int main(int argc, char **argv) {
 
 	std::vector<point> points;
 
+	printf("0 setlinewidth\n");
+	printf(".1 .setopacityalpha\n");
+
 	while (fgets(s, 2000, stdin)) {
 		int p1, p2, p3;
 		double x1, y1, x2, y2, x3, y3;
@@ -184,9 +189,12 @@ int main(int argc, char **argv) {
 
 		std::vector<size_t> route = astar(points, n1, n2);
 
+		printf("%.6f %.6f moveto ", x2 * 612, y2 * 612);
 		for (size_t i = 0; i < route.size(); i++) {
-			printf("%.6f %.6f %s ", points[route[i]].x * 612, points[route[i]].y * 612, i == 0 ? "moveto" : "lineto");
+			printf("%.6f %.6f %s ", points[route[i]].x * 612, points[route[i]].y * 612, i == 0 ? "lineto" : "lineto");
 		}
+		printf("%.6f %.6f lineto ", x1 * 612, y1 * 612);
 		printf("stroke\n");
+		fflush(stdout);
 	}
 }
