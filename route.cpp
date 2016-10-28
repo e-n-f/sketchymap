@@ -5,6 +5,8 @@
 #include <map>
 #include <set>
 #include <limits>
+#include <stack>
+#include <cmath>
 
 struct point {
 	double x;
@@ -14,6 +16,15 @@ struct point {
 	ssize_t came_from;
 	double g_score;
 	double f_score;
+	bool necessary;
+
+	point() {
+	}
+
+	point(double _x, double _y) {
+		x = _x;
+		y = _y;
+	}
 };
 
 void addpoint(std::vector<point> &points, size_t p, double x, double y) {
@@ -35,7 +46,7 @@ void addneighbor(std::vector<point> &points, size_t p1, size_t p2) {
 		double yd = points[p1].y - points[p2].y;
 		double dist = sqrt(xd * xd + yd * yd);
 
-		dist = exp(log(dist) * 2);
+		dist = exp(log(dist) * 4);
 
 		for (auto n = points[p1].neighbors.begin(); n != points[p1].neighbors.end(); ++n) {
 			if (n->second == dist) {
@@ -68,6 +79,8 @@ size_t find_node(std::vector<point> const &points, double x, double y) {
 }
 
 double heur(std::vector<point> const &points, size_t n1, size_t n2) {
+	return 0;
+
 	double xd = points[n1].x - points[n2].x;
 	double yd = points[n1].y - points[n2].y;
 	return sqrt(xd * xd + yd * yd);
@@ -206,6 +219,109 @@ void bezier(double x0, double y0, double x1, double y1, double x2, double y2, do
 	//printf("%.6f %.6f lineto ", x3 * 612, y3 * 612);
 }
 
+static double square_distance_from_line(double point_x, double point_y, double segA_x, double segA_y, double segB_x, double segB_y) {
+	double p2x = segB_x - segA_x;
+	double p2y = segB_y - segA_y;
+	double something = p2x * p2x + p2y * p2y;
+	double u = 0 == something ? 0 : ((point_x - segA_x) * p2x + (point_y - segA_y) * p2y) / something;
+
+	if (u > 1) {
+		u = 1;
+	} else if (u < 0) {
+		u = 0;
+	}
+
+	double x = segA_x + u * p2x;
+	double y = segA_y + u * p2y;
+
+	double dx = x - point_x;
+	double dy = y - point_y;
+
+	return dx * dx + dy * dy;
+}
+
+// https://github.com/Project-OSRM/osrm-backend/blob/733d1384a40f/Algorithms/DouglasePeucker.cpp
+static void douglas_peucker(std::vector<point> &geom, double e) {
+	int start = 0;
+	int n = geom.size();
+
+	e = e * e;
+	std::stack<int> recursion_stack;
+
+	{
+		int left_border = 0;
+		int right_border = 1;
+		// Sweep linerarily over array and identify those ranges that need to be checked
+		do {
+			if (geom[start + right_border].necessary) {
+				recursion_stack.push(left_border);
+				recursion_stack.push(right_border);
+				left_border = right_border;
+			}
+			++right_border;
+		} while (right_border < n);
+	}
+
+	while (!recursion_stack.empty()) {
+		// pop next element
+		int second = recursion_stack.top();
+		recursion_stack.pop();
+		int first = recursion_stack.top();
+		recursion_stack.pop();
+
+		double max_distance = -1;
+		int farthest_element_index = second;
+
+		// find index idx of element with max_distance
+		int i;
+		for (i = first + 1; i < second; i++) {
+			double temp_dist = square_distance_from_line(geom[start + i].x, geom[start + i].y, geom[start + first].x, geom[start + first].y, geom[start + second].x, geom[start + second].y);
+
+			double distance = std::fabs(temp_dist);
+
+			if (distance > e && distance > max_distance) {
+				farthest_element_index = i;
+				max_distance = distance;
+			}
+		}
+
+		if (max_distance > e) {
+			// mark idx as necessary
+			geom[start + farthest_element_index].necessary = 1;
+
+			if (1 < farthest_element_index - first) {
+				recursion_stack.push(first);
+				recursion_stack.push(farthest_element_index);
+			}
+			if (1 < second - farthest_element_index) {
+				recursion_stack.push(farthest_element_index);
+				recursion_stack.push(second);
+			}
+		}
+	}
+}
+
+static std::vector<point> simplify(std::vector<point> &line) {
+	if (line.size() == 0) {
+		return std::vector<point>();
+	}
+	for (size_t i = 0; i < line.size(); i++) {
+		line[i].necessary = false;
+	}
+	line[0].necessary = 1;
+	line[line.size() - 1].necessary = 1;
+
+	douglas_peucker(line, .01); // .04 is about a mile
+
+	std::vector<point> out;
+	for (size_t i = 0; i < line.size(); i++) {
+		if (line[i].necessary) {
+			out.push_back(line[i]);
+		}
+	}
+	return out;
+}
+
 int main(int argc, char **argv) {
 	char s[2000];
 
@@ -240,6 +356,7 @@ int main(int argc, char **argv) {
 		addneighbor(points, p3, p2);
 	}
 
+#if 0
 	// Normalize distances to shortest
 
 	double min = std::numeric_limits<double>::infinity();
@@ -257,6 +374,7 @@ int main(int argc, char **argv) {
 		}
 		points[i].neighbors = out;
 	}
+#endif
 
 	while (fgets(s, 2000, stdin)) {
 		double x1, y1, x2, y2;
@@ -271,12 +389,26 @@ int main(int argc, char **argv) {
 
 		std::vector<size_t> route = astar(points, n1, n2);
 
+		std::vector<point> line;
+		line.push_back(point(x2, y2));
+		for (size_t i = 0; i < route.size(); i++) {
+			line.push_back(points[route[i]]);
+		}
+		line.push_back(point(x1, y1));
+
+		line = simplify(line);
+
+		for (size_t i = 0; i < line.size(); i++) {
+			printf("%.6f %.6f %s ", line[i].x * 612, line[i].y * 612, i == 0 ? "moveto" : "lineto");
+		}
+		printf("stroke\n");
+
+#if 0
 		if (route.size() > 2) {
 			size_t n = route.size();
 			bezier(x2, y2, points[route[n / 3]].x, points[route[n / 3]].y, points[route[n * 2 / 3]].x, points[route[n * 2 / 3]].y, x1, y1);
 		}
 
-#if 0
 		printf("%.6f %.6f moveto ", x2 * 612, y2 * 612);
 		for (size_t i = 0; i < route.size(); i++) {
 			printf("%.6f %.6f %s ", points[route[i]].x * 612, points[route[i]].y * 612, i == 0 ? "lineto" : "lineto");
