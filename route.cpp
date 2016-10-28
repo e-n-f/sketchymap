@@ -60,8 +60,6 @@ size_t find_node(std::vector<point> const &points, double x, double y) {
 }
 
 double heur(std::vector<point> const &points, size_t n1, size_t n2) {
-	return 0;
-
 	double xd = points[n1].x - points[n2].x;
 	double yd = points[n1].y - points[n2].y;
 	return sqrt(xd * xd + yd * yd);
@@ -188,20 +186,20 @@ int main(int argc, char **argv) {
 		addneighbor(points, p3, p2);
 	}
 
-	// Normalize distances to longest
+	// Normalize distances to shortest
 
-	double max = 0;
+	double min = std::numeric_limits<double>::infinity();
 	for (size_t i = 0; i < points.size(); i++) {
 		for (auto j = points[i].neighbors.begin(); j != points[i].neighbors.end(); ++j) {
-			if (j->second > max) {
-				max = j->second;
+			if (j->second < min) {
+				min = j->second;
 			}
 		}
 	}
 	for (size_t i = 0; i < points.size(); i++) {
 		std::map<size_t, double> out;
 		for (auto j = points[i].neighbors.begin(); j != points[i].neighbors.end(); ++j) {
-			out.insert(std::pair<size_t, double>(j->first, j->second / max));
+			out.insert(std::pair<size_t, double>(j->first, j->second / min));
 		}
 		points[i].neighbors = out;
 	}
