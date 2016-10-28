@@ -1,0 +1,18 @@
+#!/usr/bin/perl
+
+open(IN, "<$ARGV[0]");
+$line = <IN>;
+($minlat, $minlon, $maxlat, $maxlon) = split(/ /, $line);
+close(IN);
+shift @ARGV;
+
+while (<>) {
+	($when, $a, $to, $b) = split(/ /);
+	($lat1, $lon1) = split(/,/, $a);
+	($lat2, $lon2) = split(/,/, $b);
+	$lat1 = ($lat1 - $minlat) / ($maxlat - $minlat);
+	$lon1 = ($lon1 - $minlon) / ($maxlon - $minlon);
+	$lat2 = ($lat2 - $minlat) / ($maxlat - $minlat);
+	$lon2 = ($lon2 - $minlon) / ($maxlon - $minlon);
+	print "$lon1 $lat1 $lon2 $lat2\n";
+}

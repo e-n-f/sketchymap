@@ -1,3 +1,4 @@
+#include <stdio.h>
 
 /*** VORONOI.C ***/
 
@@ -99,4 +100,6 @@ void voronoi(Site * (*nextsite) (void)) {
 		e = lbnd->ELedge;
 		out_ep(e);
 	}
+
+	printf("end\n");
 }
