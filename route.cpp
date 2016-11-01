@@ -432,8 +432,8 @@ int main(int argc, char **argv) {
 		std::vector<point> line;
 		line.push_back(point(x2, y2));
 		for (size_t i = 0; i < route.size(); i++) {
-			line.push_back(jitter(points, route[i]));
-			// line.push_back(points[route[i]]);
+			// line.push_back(jitter(points, route[i]));
+			line.push_back(points[route[i]]);
 		}
 		line.push_back(point(x1, y1));
 
