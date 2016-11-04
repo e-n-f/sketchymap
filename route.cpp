@@ -19,6 +19,7 @@ struct point {
 	double g_score;
 	double f_score;
 	bool necessary;
+	bool closed;
 
 	point() {
 	}
@@ -101,8 +102,6 @@ std::vector<size_t> reconstruct(std::vector<point> const &points, size_t current
 }
 
 std::vector<size_t> astar(std::vector<point> &points, size_t start, size_t goal) {
-	std::set<size_t> closed_set;
-
 	std::set<size_t> open_set;
 	open_set.insert(start);
 
@@ -110,6 +109,7 @@ std::vector<size_t> astar(std::vector<point> &points, size_t start, size_t goal)
 		points[i].g_score = std::numeric_limits<double>::infinity();
 		points[i].f_score = std::numeric_limits<double>::infinity();
 		points[i].came_from = -1;
+		points[i].closed = false;
 	}
 
 	points[start].g_score = 0;
@@ -118,7 +118,6 @@ std::vector<size_t> astar(std::vector<point> &points, size_t start, size_t goal)
 	while (open_set.size() != 0) {
 		size_t current;
 
-#if 1
 		bool first = true;
 		for (auto i = open_set.begin(); i != open_set.end(); ++i) {
 			if (first) {
@@ -130,35 +129,22 @@ std::vector<size_t> astar(std::vector<point> &points, size_t start, size_t goal)
 				current = *i;
 			}
 		}
-#else
-		for (auto i = open_set.begin(); i != open_set.end(); ++i) {
-			if (i == open_set.begin()) {
-				current = *i;
-			} else if (points[*i].g_score < points[current].g_score) {
-				current = *i;
-			}
-		}
-#endif
-
-		//printf("so current is %zu, g_score %f\n", current, points[current].g_score);
 
 		if (current == goal) {
 			return reconstruct(points, current);
 		}
 
 		open_set.erase(open_set.find(current));
-		closed_set.insert(current);
+		points[current].closed = true;
 
 		for (auto n = points[current].neighbors.begin(); n != points[current].neighbors.end(); ++n) {
 			size_t neighbor = n->first;
 
-			if (closed_set.count(neighbor) > 0) {
-				//printf("%zu is closed\n", neighbor);
+			if (points[neighbor].closed) {
 				continue;
 			}
 
 			double tentative_g_score = points[current].g_score + n->second;
-			//printf("%zu tentatively costs %f\n", neighbor, tentative_g_score);
 
 			if (open_set.count(neighbor) == 0) {
 				open_set.insert(neighbor);
@@ -243,7 +229,7 @@ void bezier(std::vector<point> const &line) {
 		printf("%.6f %.6f curveto ", x2 * 612, y2 * 612);
 	}
 
-	printf("%.6f %.6f lineto stroke\n", line[line.size() - 1].x * 612, line[line.size() - 1].y * 612);
+	printf("stroke\n");
 }
 
 static double square_distance_from_line(double point_x, double point_y, double segA_x, double segA_y, double segB_x, double segB_y) {
