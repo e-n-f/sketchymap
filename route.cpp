@@ -7,6 +7,7 @@
 #include <limits>
 #include <stack>
 #include <cmath>
+#include <unistd.h>
 
 // (cat 4.list | ./normalize-list-specified bounds/4 | ./voronoi/voronoi -t; cat 4.geo | ./normalize-geo-specified bounds/4 ) | time ./route > foo.ps
 
@@ -49,7 +50,7 @@ void addneighbor(std::vector<point> &points, size_t p1, size_t p2) {
 		double yd = points[p1].y - points[p2].y;
 		double dist = sqrt(xd * xd + yd * yd);
 
-		dist = exp(log(dist) * 2);
+		dist = exp(log(dist) * 4);
 
 		for (auto n = points[p1].neighbors.begin(); n != points[p1].neighbors.end(); ++n) {
 			if (n->second == dist) {
@@ -75,7 +76,6 @@ size_t find_node(std::vector<point> const &points, double x, double y) {
 				best = i;
 				bestdsq = dsq;
 			}
-
 		}
 	}
 	return best;
@@ -201,9 +201,9 @@ void bezier(std::vector<point> const &line) {
 		double xc3 = (x2 + x3) / 2.0;
 		double yc3 = (y2 + y3) / 2.0;
 
-		double len1 = sqrt((x1-x0) * (x1-x0) + (y1-y0) * (y1-y0));
-		double len2 = sqrt((x2-x1) * (x2-x1) + (y2-y1) * (y2-y1));
-		double len3 = sqrt((x3-x2) * (x3-x2) + (y3-y2) * (y3-y2));
+		double len1 = sqrt((x1 - x0) * (x1 - x0) + (y1 - y0) * (y1 - y0));
+		double len2 = sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
+		double len3 = sqrt((x3 - x2) * (x3 - x2) + (y3 - y2) * (y3 - y2));
 
 		double k1 = len1 / (len1 + len2);
 		double k2 = len2 / (len2 + len3);
@@ -324,7 +324,7 @@ static std::vector<point> simplify(std::vector<point> &line) {
 	line[0].necessary = 1;
 	line[line.size() - 1].necessary = 1;
 
-	douglas_peucker(line, .02); // .04 is about a mile
+	douglas_peucker(line, .02);  // .04 is about a mile
 
 	std::vector<point> out;
 	for (size_t i = 0; i < line.size(); i++) {
@@ -351,6 +351,11 @@ point jitter(std::vector<point> const &points, size_t i) {
 int main(int argc, char **argv) {
 	char s[2000];
 
+	size_t CPUS = sysconf(_SC_NPROCESSORS_ONLN);
+	if (CPUS < 1) {
+		CPUS = 1;
+	}
+
 	std::vector<point> points;
 
 	printf("0 setlinewidth\n");
@@ -365,7 +370,7 @@ int main(int argc, char **argv) {
 		}
 
 		if (sscanf(s, "%d %lf,%lf %d %lf,%lf %d %lf,%lf",
-			&p1, &x1, &y1, &p2, &x2, &y2, &p3, &x3, &y3) != 9) {
+			   &p1, &x1, &y1, &p2, &x2, &y2, &p3, &x3, &y3) != 9) {
 			fprintf(stderr, "??? %s", s);
 			continue;
 		}
