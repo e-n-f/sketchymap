@@ -324,7 +324,7 @@ static std::vector<point> simplify(std::vector<point> &line) {
 	line[0].necessary = 1;
 	line[line.size() - 1].necessary = 1;
 
-	douglas_peucker(line, .02);  // .04 is about a mile
+	douglas_peucker(line, .01);  // .04 is about a mile
 
 	std::vector<point> out;
 	for (size_t i = 0; i < line.size(); i++) {
