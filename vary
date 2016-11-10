@@ -3,14 +3,14 @@
 # cat data/locationstream-2013*list | ./limit-specified bounds/4 | /data2/data/github/geotools/cleanse -u |  awk '{print $1, $2, $3, $4 }' | tee /tmp/4.list | ./plot-motion | head -100000 > /tmp/4.geo
 
 $seq = 0;
-open(IN, "cat 22.geo | ./normalize-geo-specified bounds/22 |");
+open(IN, "cat 4.geo | ./normalize-geo-specified bounds/4 |");
 while (<IN>) {
-	if ($seq % 50 == 0) {
+	if ($seq % 25 == 0) {
 		close(OUT);
 
 		srand($seq);
 		open(TMP, ">/tmp/$$");
-		open(LIST, "22.list");
+		open(LIST, "4.list");
 		$count = 0;
 		while (<LIST>) {
 			if (rand(1) < 10000 / 127000) {
@@ -22,7 +22,7 @@ while (<IN>) {
 		close(TMP);
 		# print STDERR "$count\n";
 
-		open(OUT, "| (cat /tmp/$$ | ./normalize-list-specified bounds/22 | ./voronoi/voronoi -t; cat) | ./route");
+		open(OUT, "| (cat /tmp/$$ | ./normalize-list-specified bounds/4 | ./voronoi/voronoi -t; cat) | ./route");
 	}
 
 	$seq++;
