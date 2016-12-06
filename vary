@@ -1,19 +1,33 @@
 #!/usr/bin/perl
 
-# cat data/locationstream-2013*list | ./limit-specified bounds/4 | /data2/data/github/geotools/cleanse -u |  awk '{print $1, $2, $3, $4 }' | tee /tmp/4.list | ./plot-motion | head -100000 > /tmp/4.geo
+if ($#ARGV < 0) {
+	print STDERR "Usage: $0 bound\n";
+	exit(EXIT_FAILURE);
+}
+
+$bound = $ARGV[0];
+
+system "cat ../data/locationstream-2013*list | ../limit-specified ../bounds/$bound | /data2/data/github/geotools/cleanse -u | awk '{print \$1, \$2, \$3, \$4 }' | tee /tmp/$bound.list | ../plot-motion | head -100000 > /tmp/$bound.geo";
+
+$lines = 0;
+open(IN, "/tmp/$bound.list");
+while (<IN>) {
+	$lines++;
+}
+close(IN);
 
 $seq = 0;
-open(IN, "cat 4.geo | ./normalize-geo-specified bounds/4 |");
+open(IN, "cat /tmp/$bound.geo | ./normalize-geo-specified ../bounds/$bound |");
 while (<IN>) {
 	if ($seq % 25 == 0) {
 		close(OUT);
 
 		srand($seq);
 		open(TMP, ">/tmp/$$");
-		open(LIST, "4.list");
+		open(LIST, "/tmp/$bound.list");
 		$count = 0;
 		while (<LIST>) {
-			if (rand(1) < 10000 / 127000) {
+			if (rand(1) < 10000 / $lines) {
 				print TMP $_;
 				$count++;
 			}
@@ -22,7 +36,7 @@ while (<IN>) {
 		close(TMP);
 		# print STDERR "$count\n";
 
-		open(OUT, "| (cat /tmp/$$ | ./normalize-list-specified bounds/4 | ./voronoi/voronoi -t; cat) | ./route");
+		open(OUT, "| (cat /tmp/$$ | ./normalize-list-specified ../bounds/$bound | ./voronoi/voronoi -t; cat) | ./route");
 	}
 
 	$seq++;
@@ -30,3 +44,4 @@ while (<IN>) {
 
 	last if ($seq > 10000);
 }
+close(IN);
